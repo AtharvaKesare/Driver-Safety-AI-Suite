@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drowsiness Detector (Advanced)</title>
+    
+    <!-- Meta tags for SEO & Sharing -->
+    <meta name="description" content="A real-time, purely in-browser drowsiness detection app built with MediaPipe FaceLandmarker.">
+    
+    <link rel="stylesheet" href="styles.css">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Background Effects -->
+    <div class="bg-grid"></div>
+    <div class="bg-glow"></div>
+
+    <div class="app-container">
+        <header>
+            <h1>Drowsy <span class="gradient-text">Alert</span></h1>
+            <p class="subtitle">Real-time driver fatigue monitoring running 100% locally in your browser.</p>
+        </header>
+
+        <main>
+            <!-- Live Status Pill -->
+            <div class="status-pill-container">
+                <div id="live-indicator" class="status-pill offline">
+                    <span class="dot"></span>
+                    <span class="text">OFFLINE</span>
+                </div>
+            </div>
+
+            <div class="video-wrapper">
+                <!-- Camera Viewfinder HUD Brackets -->
+                <div class="hud-bracket top-left"></div>
+                <div class="hud-bracket top-right"></div>
+                <div class="hud-bracket bottom-left"></div>
+                <div class="hud-bracket bottom-right"></div>
+
+                <!-- Video element to capture webcam -->
+                <video id="webcam" autoplay playsinline></video>
+                <!-- Canvas element to draw the face mesh over the video -->
+                <canvas id="output_canvas"></canvas>
+                
+                <!-- Status & Alerts Overlay -->
+                <div id="status-overlay" class="status-overlay">
+                    <div class="status-content">
+                        <span id="status-icon">📷</span>
+                        <h2 id="status-text">Camera Off</h2>
+                        <p id="status-subtext">Click start to begin monitoring</p>
+                    </div>
+                </div>
+                
+                <!-- Drowsiness Alert Overlay (Red flashing) -->
+                <div id="alert-overlay" class="alert-overlay hidden">
+                    <div class="alert-box">
+                        <h2>⚠️ DROWSY ALERT ⚠️</h2>
+                        <p>WAKE UP!</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="controls">
+                <button id="start-btn" class="btn btn-primary">Start Detection</button>
+                <button id="stop-btn" class="btn btn-secondary" disabled>Stop</button>
+            </div>
+
+            <!-- Dashboard Panel -->
+            <div class="dashboard-panel" id="dashboard-panel" style="display: none;">
+                <div class="settings-section">
+                    <h3>Detection Settings</h3>
+                    <div class="setting-item">
+                        <label for="ear-threshold">Drowsiness Sensitivity (EAR): <span id="ear-val">0.23</span></label>
+                        <input type="range" id="ear-threshold" min="0.10" max="0.35" step="0.01" value="0.23">
+                    </div>
+                    <div class="setting-item">
+                        <label for="mar-threshold">Yawn Sensitivity (MAR): <span id="mar-val">0.50</span></label>
+                        <input type="range" id="mar-threshold" min="0.30" max="0.80" step="0.01" value="0.50">
+                    </div>
+                    <div class="setting-item toggles">
+                        <label><input type="checkbox" id="toggle-yawn" checked> Enable Yawn Detection</label>
+                        <label><input type="checkbox" id="toggle-distraction" checked> Enable Distraction Detection</label>
+                    </div>
+                </div>
+                <div class="chart-section">
+                    <h3>Live Analytics</h3>
+                    <div class="chart-container">
+                        <canvas id="earChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <div class="privacy-note">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                <p><strong>Privacy First:</strong> Your video is processed entirely in-browser and is never uploaded or saved.</p>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Session Summary Modal -->
+    <div id="summary-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2>Session Complete</h2>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <span class="stat-label">Duration</span>
+                    <span class="stat-value" id="stat-duration">00:00</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">Safety Score</span>
+                    <span class="stat-value highlight" id="stat-score">100</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">Drowsy Events</span>
+                    <span class="stat-value" id="stat-drowsy">0</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">Yawn Events</span>
+                    <span class="stat-value" id="stat-yawn">0</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">Distractions</span>
+                    <span class="stat-value" id="stat-distracted">0</span>
+                </div>
+            </div>
+            <button id="close-modal-btn" class="btn btn-primary">Close</button>
+        </div>
+    </div>
+
+    <!-- Hidden audio element for the alarm -->
+    <audio id="alarm-sound" src="beep.wav" preload="auto"></audio>
+
+    <!-- MediaPipe Tasks Vision -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/vision_bundle.js" crossorigin="anonymous"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Import MediaPipe Vision Tasks -->
+    <script type="module" src="app.js"></script>
+</body>
+</html>
