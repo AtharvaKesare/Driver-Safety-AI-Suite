@@ -1,5 +1,7 @@
 # Driver Safety AI Suite 🚗💤
 
+[![Live Demo](https://img.shields.io/badge/Live_Demo-Play_Now-success?style=for-the-badge)](https://web-app-ten-amber.vercel.app)
+
 An advanced, browser-based artificial intelligence suite designed to monitor driver fatigue and distraction in real-time. Built with JavaScript, MediaPipe, and HTML5 Canvas, this application runs entirely locally on the user's device (edge computing), ensuring 100% privacy and zero latency.
 
 ## Features ✨
